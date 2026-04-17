@@ -1,24 +1,22 @@
-from http.server import BaseHTTPRequestHandler
-from urllib.parse import urlparse, parse_qs
-import json
 import asyncio
 import time
+from flask import Flask, request, jsonify
+from TikTokLive import TikTokLiveClient
 
-# ── Cache ────────────────────────────────────────────────
-# Stores { username: (is_live: bool, timestamp: float) }
-# Results are reused for 30 seconds to avoid hammering TikTok
+app = Flask(__name__)
+
+# ── Simple in-memory cache ────────────────────────────────
 _cache: dict = {}
-CACHE_TTL = 30
+CACHE_TTL = 30  # seconds
 
 async def _check(username: str) -> bool:
     try:
-        from TikTokLive import TikTokLiveClient
         client = TikTokLiveClient(unique_id=username)
         return await client.is_live(username)
     except Exception:
         return False
 
-def get_live_status(username: str) -> bool:
+def get_status(username: str) -> bool:
     now = time.time()
     if username in _cache:
         result, ts = _cache[username]
@@ -28,26 +26,12 @@ def get_live_status(username: str) -> bool:
     _cache[username] = (result, now)
     return result
 
-# ── Vercel handler ────────────────────────────────────────
-class handler(BaseHTTPRequestHandler):
-
-    def do_GET(self):
-        parsed = urlparse(self.path)
-        params = parse_qs(parsed.query)
-
-        raw = params.get('usernames', [''])[0]
-        usernames = [u.strip().lstrip('@') for u in raw.split(',') if u.strip()]
-
-        results = {u: get_live_status(u) for u in usernames}
-
-        body = json.dumps(results).encode()
-
-        self.send_response(200)
-        self.send_header('Content-Type', 'application/json')
-        self.send_header('Access-Control-Allow-Origin', '*')
-        self.send_header('Content-Length', str(len(body)))
-        self.end_headers()
-        self.wfile.write(body)
-
-    def log_message(self, format, *args):
-        pass
+# ── Route ─────────────────────────────────────────────────
+@app.route('/api/live')
+def live():
+    raw      = request.args.get('usernames', '')
+    usernames = [u.strip().lstrip('@') for u in raw.split(',') if u.strip()]
+    results  = {u: get_status(u) for u in usernames}
+    resp     = jsonify(results)
+    resp.headers['Access-Control-Allow-Origin'] = '*'
+    return resp
