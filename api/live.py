@@ -1,18 +1,29 @@
-import asyncio
 import time
+import requests
 from flask import Flask, request, jsonify
-from TikTokLive import TikTokLiveClient
 
 app = Flask(__name__)
 
-# ── Simple in-memory cache ────────────────────────────────
+# ── Cache ─────────────────────────────────────────────────
 _cache: dict = {}
 CACHE_TTL = 30  # seconds
 
-async def _check(username: str) -> bool:
+HEADERS = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+                  'AppleWebKit/537.36 (KHTML, like Gecko) '
+                  'Chrome/124.0.0.0 Safari/537.36',
+    'Referer': 'https://www.tiktok.com/',
+}
+
+def check_live(username: str) -> bool:
     try:
-        client = TikTokLiveClient(unique_id=username)
-        return await client.is_live(username)
+        url = (
+            'https://webcast.tiktok.com/webcast/room/check_alive/'
+            f'?aid=1988&uniqueId={username}'
+        )
+        resp = requests.get(url, headers=HEADERS, timeout=6)
+        data = resp.json()
+        return bool(data.get('data', {}).get('alive', False))
     except Exception:
         return False
 
@@ -22,16 +33,16 @@ def get_status(username: str) -> bool:
         result, ts = _cache[username]
         if now - ts < CACHE_TTL:
             return result
-    result = asyncio.run(_check(username))
+    result = check_live(username)
     _cache[username] = (result, now)
     return result
 
 # ── Route ─────────────────────────────────────────────────
 @app.route('/api/live')
 def live():
-    raw      = request.args.get('usernames', '')
+    raw       = request.args.get('usernames', '')
     usernames = [u.strip().lstrip('@') for u in raw.split(',') if u.strip()]
-    results  = {u: get_status(u) for u in usernames}
-    resp     = jsonify(results)
+    results   = {u: get_status(u) for u in usernames}
+    resp      = jsonify(results)
     resp.headers['Access-Control-Allow-Origin'] = '*'
     return resp
