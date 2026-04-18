@@ -1,5 +1,6 @@
 import time
-import requests
+import json
+import urllib.request
 from flask import Flask, request, jsonify
 
 app = Flask(__name__)
@@ -8,21 +9,20 @@ app = Flask(__name__)
 _cache: dict = {}
 CACHE_TTL = 30  # seconds
 
-HEADERS = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
-                  'AppleWebKit/537.36 (KHTML, like Gecko) '
-                  'Chrome/124.0.0.0 Safari/537.36',
-    'Referer': 'https://www.tiktok.com/',
-}
-
 def check_live(username: str) -> bool:
     try:
         url = (
             'https://webcast.tiktok.com/webcast/room/check_alive/'
             f'?aid=1988&uniqueId={username}'
         )
-        resp = requests.get(url, headers=HEADERS, timeout=6)
-        data = resp.json()
+        req = urllib.request.Request(url, headers={
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+                          'AppleWebKit/537.36 (KHTML, like Gecko) '
+                          'Chrome/124.0.0.0 Safari/537.36',
+            'Referer': 'https://www.tiktok.com/',
+        })
+        with urllib.request.urlopen(req, timeout=6) as resp:
+            data = json.loads(resp.read())
         return bool(data.get('data', {}).get('alive', False))
     except Exception:
         return False
