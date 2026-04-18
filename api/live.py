@@ -21,7 +21,8 @@ def check_live(username: str) -> bool:
             html = resp.read().decode('utf-8', errors='ignore')
         # When live, TikTok embeds active room data containing "liveRoomInfo"
         # When not live the key is absent or room status is not 4 (ongoing)
-        return '"liveRoomInfo"' in html and '"status":4' in html
+        # squareCoverImg has a URL only when the stream is active
+        return '"squareCoverImg":"https://' in html
     except Exception:
         return False
 
