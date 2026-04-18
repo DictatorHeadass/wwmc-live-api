@@ -49,34 +49,31 @@ def live():
 def debug():
     username = request.args.get('username', 'yurialpha7_')
     out = {}
-    # Try check_alive endpoint
     try:
-        url = (
-            'https://webcast.tiktok.com/webcast/room/check_alive/'
-            f'?aid=1988&uniqueId={username}'
-        )
+        url = f'https://www.tiktok.com/@{username}/live'
         req = urllib.request.Request(url, headers={
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
                           'AppleWebKit/537.36 (KHTML, like Gecko) '
                           'Chrome/124.0.0.0 Safari/537.36',
-            'Referer': 'https://www.tiktok.com/',
+            'Accept-Language': 'en-US,en;q=0.9',
         })
-        with urllib.request.urlopen(req, timeout=6) as r:
-            out['check_alive'] = {'status': r.status, 'body': r.read().decode('utf-8', errors='replace')}
+        with urllib.request.urlopen(req, timeout=10) as r:
+            html = r.read().decode('utf-8', errors='ignore')
+        # Search for relevant substrings and return 120-char snippets around each
+        markers = [
+            'liveRoomInfo', 'isLiveNow', '"alive"', '"status"',
+            'liveRoom', 'roomInfo', 'streamStatus', 'LIVE_STATUS',
+        ]
+        snips = {}
+        for m in markers:
+            idx = html.find(m)
+            snips[m] = html[max(0, idx-20):idx+100] if idx != -1 else None
+        out['found_markers'] = {k: v for k, v in snips.items() if v is not None}
+        out['missing_markers'] = [k for k, v in snips.items() if v is None]
+        out['html_length'] = len(html)
+        out['final_url'] = url
     except Exception as e:
-        out['check_alive'] = {'error': str(e)}
-    # Try profile page redirect check
-    try:
-        url2 = f'https://www.tiktok.com/@{username}/live'
-        req2 = urllib.request.Request(url2, headers={
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
-                          'AppleWebKit/537.36 (KHTML, like Gecko) '
-                          'Chrome/124.0.0.0 Safari/537.36',
-        })
-        with urllib.request.urlopen(req2, timeout=10) as r:
-            out['live_page'] = {'final_url': r.geturl(), 'status': r.status}
-    except Exception as e:
-        out['live_page'] = {'error': str(e)}
+        out['error'] = str(e)
     resp = jsonify(out)
     resp.headers['Access-Control-Allow-Origin'] = '*'
     return resp
