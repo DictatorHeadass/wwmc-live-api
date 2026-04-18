@@ -60,18 +60,11 @@ def debug():
         with urllib.request.urlopen(req, timeout=10) as r:
             html = r.read().decode('utf-8', errors='ignore')
         # Search for relevant substrings and return 120-char snippets around each
-        markers = [
-            'liveRoomInfo', 'isLiveNow', '"alive"', '"status"',
-            'liveRoom', 'roomInfo', 'streamStatus', 'LIVE_STATUS',
-        ]
-        snips = {}
-        for m in markers:
-            idx = html.find(m)
-            snips[m] = html[max(0, idx-20):idx+100] if idx != -1 else None
-        out['found_markers'] = {k: v for k, v in snips.items() if v is not None}
-        out['missing_markers'] = [k for k, v in snips.items() if v is None]
+        # Find liveRoom value — show what comes right after the key
+        idx = html.find('"liveRoom":')
+        out['liveRoom_snippet'] = html[idx:idx+120] if idx != -1 else None
+        out['has_liveRoom_object'] = '"liveRoom":{"' in html
         out['html_length'] = len(html)
-        out['final_url'] = url
     except Exception as e:
         out['error'] = str(e)
     resp = jsonify(out)
