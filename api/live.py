@@ -15,10 +15,13 @@ def check_live(username: str) -> bool:
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
                           'AppleWebKit/537.36 (KHTML, like Gecko) '
                           'Chrome/124.0.0.0 Safari/537.36',
+            'Accept-Language': 'en-US,en;q=0.9',
         })
         with urllib.request.urlopen(req, timeout=10) as resp:
-            final_url = resp.geturl()
-        return final_url.rstrip('/').endswith('/live')
+            html = resp.read().decode('utf-8', errors='ignore')
+        # When live, TikTok embeds active room data containing "liveRoomInfo"
+        # When not live the key is absent or room status is not 4 (ongoing)
+        return '"liveRoomInfo"' in html and '"status":4' in html
     except Exception:
         return False
 
