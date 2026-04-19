@@ -6,7 +6,8 @@
     }
   ],
   "routes": [
-    { "src": "/api/live",  "dest": "/api/live.py" },
-    { "src": "/api/debug", "dest": "/api/live.py" }
+    { "src": "/api/live",   "dest": "/api/live.py" },
+    { "src": "/api/avatar", "dest": "/api/live.py" },
+    { "src": "/api/debug",  "dest": "/api/live.py" }
   ]
 }
