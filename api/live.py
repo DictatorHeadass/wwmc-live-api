@@ -62,18 +62,9 @@ def debug():
         with urllib.request.urlopen(req, timeout=10) as r:
             html = r.read().decode('utf-8', errors='ignore')
         # Search for relevant substrings and return 120-char snippets around each
-        # Show all occurrences of squareCoverImg with surrounding context
-        snips = []
-        search = '"squareCoverImg":"https://'
-        start = 0
-        while True:
-            idx = html.find(search, start)
-            if idx == -1:
-                break
-            snips.append(html[max(0, idx-60):idx+120])
-            start = idx + 1
-        out['squareCoverImg_occurrences'] = snips
-        out['liveRoom_snippet'] = html[html.find('"liveRoom":'):html.find('"liveRoom":"')+200] if '"liveRoom":' in html else None
+        # Show first 600 chars of the liveRoom object
+        idx = html.find('"liveRoom":{')
+        out['liveRoom_object'] = html[idx:idx+600] if idx != -1 else None
         out['html_length'] = len(html)
     except Exception as e:
         out['error'] = str(e)
