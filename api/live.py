@@ -21,9 +21,11 @@ def check_live(username: str) -> bool:
             html = resp.read().decode('utf-8', errors='ignore')
         # When live, TikTok embeds active room data containing "liveRoomInfo"
         # When not live the key is absent or room status is not 4 (ongoing)
-        # When live: liveRoom.coverUrl is "" and squareCoverImg has a URL
-        # When offline: liveRoom.coverUrl has the profile avatar URL
-        return '"liveRoom":{"coverUrl":"","squareCoverImg":"https://' in html
+        # liveRoom.status: 2 = live now, 4 = stream ended (cached data)
+        idx = html.find('"liveRoom":{')
+        if idx == -1:
+            return False
+        return '"status":2' in html[idx:idx+600]
     except Exception:
         return False
 
